@@ -1,2 +1,4 @@
 # Skipping uploading the dataset
 Cityscapes
+runs/
+*.pyc
