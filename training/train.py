@@ -111,10 +111,12 @@ def main():
     parser.add_argument('--model', type=str, default='unet', help="Model type: unet or deeplabv3p")
     parser.add_argument('--dataset', type=str, default='cityscapes', help="Dataset: cityscapes")
     parser.add_argument('--data_root', type=str, default='./data/cityscapes', help="Path to Cityscapes dataset root")
-    parser.add_argument('--num_epochs', type=int, default=100, help="Number of training epochs")
-    parser.add_argument('--batch_size', type=int, default=32, help="Batch size")
-    parser.add_argument('--lr', type=float, default=1e-3, help="Learning rate")
+    parser.add_argument('--num_epochs', type=int, default=200, help="Number of training epochs")
+    parser.add_argument('--batch_size', type=int, default=8, help="Batch size")
+    parser.add_argument('--lr', type=float, default=1e-2, help="Learning rate")
     parser.add_argument('--log_dir', type=str, default='./runs/segmentation_experiment', help="Directory to save logs and best model")
+    parser.add_argument('--checkpoint', type=str, default=None, help="Path to a checkpoint to resume training")
+
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -143,10 +145,18 @@ def main():
     else:
         raise ValueError("Unsupported model type")
 
-    criterion = HybridLoss(weight_focal=0.5, weight_dice=0.5, alpha=0.25, gamma=2)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # If a checkpoint is provided, load the model weights
+    if args.checkpoint is not None:
+        print("Resuming training from checkpoint:", args.checkpoint)
+        checkpoint = torch.load(args.checkpoint, map_location=device)
+        model.load_state_dict(checkpoint)
+
+    criterion = HybridLoss(weight_focal=0.7, weight_dice=0.4, alpha=0.5, gamma=1.5)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+
     # Initialize the ReduceLROnPlateau scheduler; it monitors the validation loss.
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=15, min_lr=1e-5, verbose=True)
 
     train_model(model, train_loader, valid_loader, criterion, optimizer, scheduler,
                 args.num_epochs, device, num_classes, args.log_dir)

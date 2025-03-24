@@ -2,3 +2,5 @@
 Cityscapes
 runs/
 *.pyc
+resized
+myenv
