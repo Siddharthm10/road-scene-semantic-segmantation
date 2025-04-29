@@ -17,8 +17,8 @@ class SegmentationTrainTransform:
             target = F.hflip(target)
 
         # Resize both image and target to the desired output size directly
-        image = F.resize(image, self.output_size, interpolation=F.InterpolationMode.BILINEAR)
-        target = F.resize(target, self.output_size, interpolation=F.InterpolationMode.NEAREST)
+        # image = F.resize(image, self.output_size, interpolation=F.InterpolationMode.BILINEAR)
+        # target = F.resize(target, self.output_size, interpolation=F.InterpolationMode.NEAREST)
 
         # Convert image to tensor and normalize
         image = F.to_tensor(image)
@@ -34,8 +34,8 @@ class SegmentationValTransform:
         self.output_size = output_size
 
     def __call__(self, image, target):
-        image = F.resize(image, self.output_size, interpolation=F.InterpolationMode.BILINEAR)
-        target = F.resize(target, self.output_size, interpolation=F.InterpolationMode.NEAREST)
+        # image = F.resize(image, self.output_size, interpolation=F.InterpolationMode.BILINEAR)
+        # target = F.resize(target, self.output_size, interpolation=F.InterpolationMode.NEAREST)
         
         image = F.to_tensor(image)
         image = F.normalize(image, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])

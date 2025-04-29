@@ -111,9 +111,9 @@ def main():
     parser.add_argument('--model', type=str, default='unet', help="Model type: unet or deeplabv3p")
     parser.add_argument('--dataset', type=str, default='cityscapes', help="Dataset: cityscapes")
     parser.add_argument('--data_root', type=str, default='./data/cityscapes', help="Path to Cityscapes dataset root")
-    parser.add_argument('--num_epochs', type=int, default=200, help="Number of training epochs")
+    parser.add_argument('--num_epochs', type=int, default=100, help="Number of training epochs")
     parser.add_argument('--batch_size', type=int, default=8, help="Batch size")
-    parser.add_argument('--lr', type=float, default=1e-2, help="Learning rate")
+    parser.add_argument('--lr', type=float, default=2e-4, help="Learning rate")
     parser.add_argument('--log_dir', type=str, default='./runs/segmentation_experiment', help="Directory to save logs and best model")
     parser.add_argument('--checkpoint', type=str, default=None, help="Path to a checkpoint to resume training")
 
@@ -140,7 +140,7 @@ def main():
 
     if args.model.lower() == 'unet':
         model = UNet(n_channels=3, n_classes=num_classes).to(device)
-    elif args.model.lower() == 'deeplabv3p':
+    elif args.model.lower() == 'deeplabv3':
         model = DeepLabV3Plus(num_classes=num_classes, backbone='resnet50', pretrained_backbone=True).to(device)
     else:
         raise ValueError("Unsupported model type")
@@ -151,9 +151,10 @@ def main():
         checkpoint = torch.load(args.checkpoint, map_location=device)
         model.load_state_dict(checkpoint)
 
-    criterion = HybridLoss(weight_focal=0.7, weight_dice=0.4, alpha=0.5, gamma=1.5)
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    # criterion = HybridLoss(weight_focal=0.7, weight_dice=0.4, alpha=0.5, gamma=1.5)
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=255)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
 
     # Initialize the ReduceLROnPlateau scheduler; it monitors the validation loss.
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=15, min_lr=1e-5, verbose=True)
