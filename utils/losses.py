@@ -11,7 +11,7 @@ def focal_loss(inputs, targets, alpha=0.5, gamma=1.5, ignore_index=255):
     else:
         return focal_loss_val.mean()
 
-def dice_loss(inputs, targets, smooth=0.1, ignore_index=255):
+def dice_loss(inputs, targets, smooth=0.5, ignore_index=255):
     num_classes = inputs.shape[1]
     valid_mask = (targets != ignore_index)
     targets_clamped = targets.clone()
