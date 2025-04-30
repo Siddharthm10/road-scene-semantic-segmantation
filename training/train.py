@@ -21,6 +21,7 @@ from models.unet import UNet
 from models.deeplabv3 import DeepLabV3Plus
 from models.deeplabv3_attention import DeepLabV3PlusWithAttention
 from models.unet_attention import UNetWithAttention
+from tqdm import tqdm
 
 def set_seed(seed):
     random.seed(seed)
@@ -42,7 +43,7 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, schedul
         model.train()
         running_loss = 0.0
 
-        for i, (images, masks) in enumerate(train_loader):
+        for i, (images, masks) in enumerate(tqdm(train_loader, desc=f"Train Epoch {epoch+1}")):
             images = images.to(device)
             masks = masks.to(device)
             optimizer.zero_grad()
@@ -64,11 +65,11 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, schedul
         count_ious = np.zeros(num_classes)
 
         with torch.no_grad():
-            for images, masks in valid_loader:
+            for images, masks in tqdm(valid_loader, desc=f"Val Epoch {epoch+1}"):
                 images = images.to(device)
                 masks = masks.to(device)
                 outputs = model(images)
-                masks = convert_id_to_train_id(masks)
+                # print("Mask dtype:", masks.dtype)  # Should be torch.long
                 loss = criterion(outputs, masks)
                 valid_loss += loss.item()
                 preds = torch.argmax(outputs, dim=1)
@@ -115,20 +116,22 @@ def main():
 
     args = parser.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    print(f"Using device: {device}")
+
     num_classes = 19
 
     set_seed(42)
     os.makedirs(args.log_dir, exist_ok=True)
 
-    train_transform = SegmentationTrainTransform(base_size=(1024, 512), scale_range=(1.0, 1.5))
-    val_transform = SegmentationValTransform(resize_to=(512, 1024))
+    train_transform = SegmentationTrainTransform(base_size=(512, 256), scale_range=(1.0, 1.5))
+    val_transform = SegmentationValTransform(resize_to=(256, 512))
 
     train_dataset = CityscapesDatasetWrapper(root=args.data_root, split='train', mode='fine', target_type='semantic', joint_transform=train_transform)
     valid_dataset = CityscapesDatasetWrapper(root=args.data_root, split='val', mode='fine', target_type='semantic', joint_transform=val_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
     if args.model.lower() == 'unet':
         model = UNet(n_channels=3, n_classes=num_classes).to(device)
@@ -146,8 +149,9 @@ def main():
         checkpoint = torch.load(args.checkpoint, map_location=device)
         model.load_state_dict(checkpoint)
 
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=255)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+    # criterion = torch.nn.CrossEntropyLoss(ignore_index=255)
+    criterion = HybridLoss(weight_focal=0.7, weight_dice=0.3, alpha=0.5, gamma=1.5, smooth=0.1, ignore_index=255, num_classes=num_classes)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)      
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_epochs, eta_min=1e-5)
 
     train_model(model, train_loader, valid_loader, criterion, optimizer, scheduler,

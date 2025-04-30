@@ -26,7 +26,7 @@ class SegmentationTrainTransform:
         new_w = int(self.base_size[0] * scale)
         new_h = int(self.base_size[1] * scale)
 
-        image = F.resize(image, (new_h, new_w), interpolation=F.InterpolationMode.BILINEAR)
+        image = F.resize(image, (new_h, new_w), interpolation=F.InterpolationMode.BICUBIC)
         target = F.resize(target, (new_h, new_w), interpolation=F.InterpolationMode.NEAREST)
 
         # Random crop back to 1024x512 (W x H)
@@ -53,7 +53,7 @@ class SegmentationValTransform:
         self.resize_to = resize_to
 
     def __call__(self, image, target):
-        image = F.resize(image, self.resize_to, interpolation=F.InterpolationMode.BILINEAR)
+        image = F.resize(image, self.resize_to, interpolation=F.InterpolationMode.BICUBIC)
         target = F.resize(target, self.resize_to, interpolation=F.InterpolationMode.NEAREST)
 
         image = F.to_tensor(image)
