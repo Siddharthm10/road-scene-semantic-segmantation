@@ -41,8 +41,8 @@ id_to_trainid = {
 
 # Function to convert raw labels to train labels
 def convert_id_to_train_id(label):
-    label = label.clone()  # Clone to avoid modifying the original tensor
-    for k, v in id_to_trainid.items():
-        label[label == k] = v
-    return label
+    if not isinstance(label, torch.Tensor):
+        label = torch.from_numpy(np.array(label)).long()
+    mapping = torch.tensor([id_to_trainid.get(i, 255) for i in range(256)], dtype=torch.uint8, device=label.device)
+    return mapping[label]
 
