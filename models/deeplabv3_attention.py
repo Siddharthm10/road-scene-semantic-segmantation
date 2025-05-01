@@ -25,6 +25,9 @@ class AttentionGate(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x, g):
+        # Ensure x and g are the same spatial size
+        if x.shape[2:] != g.shape[2:]:
+            g = F.interpolate(g, size=x.shape[2:], mode='bilinear', align_corners=True)
         g1 = self.W_g(g)
         x1 = self.W_x(x)
         psi = self.relu(g1 + x1)
@@ -114,7 +117,8 @@ class DeepLabV3PlusWithAttention(nn.Module):
         super(DeepLabV3PlusWithAttention, self).__init__()
         if backbone == 'mobilenetv2':
             mobilenet = models.mobilenet_v2(pretrained=pretrained_backbone)
-            self.backbone = mobilenet.features
+            self.backbone_low = mobilenet.features[:4]   # low-level features (up to layer 3)
+            self.backbone_high = mobilenet.features[4:18]  # high-level features (up to layer 17)
             self.low_level_channels = 24
             self.aspp_in_channels = 320
         else:
@@ -126,11 +130,9 @@ class DeepLabV3PlusWithAttention(nn.Module):
                                num_classes=num_classes)
 
     def forward(self, x):
-        low_level_feat = None
-        for i, layer in enumerate(self.backbone):
-            x = layer(x)
-            if i == 4:
-                low_level_feat = x
+        x = self.backbone_low(x)
+        low_level_feat = x
+        x = self.backbone_high(x)
         x = self.aspp(x)
         x = self.decoder(x, low_level_feat)
         return F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=True)

@@ -46,6 +46,7 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, schedul
         for i, (images, masks) in enumerate(tqdm(train_loader, desc=f"Train Epoch {epoch+1}")):
             images = images.to(device)
             masks = masks.to(device)
+            masks = masks.long()
             optimizer.zero_grad()
             outputs = model(images)
             loss = criterion(outputs, masks)
@@ -68,6 +69,7 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, schedul
             for images, masks in tqdm(valid_loader, desc=f"Val Epoch {epoch+1}"):
                 images = images.to(device)
                 masks = masks.to(device)
+                masks = masks.long()
                 outputs = model(images)
                 # print("Mask dtype:", masks.dtype)  # Should be torch.long
                 loss = criterion(outputs, masks)
@@ -116,7 +118,7 @@ def main():
 
     args = parser.parse_args()
 
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
     num_classes = 19
@@ -124,8 +126,8 @@ def main():
     set_seed(42)
     os.makedirs(args.log_dir, exist_ok=True)
 
-    train_transform = SegmentationTrainTransform(base_size=(512, 256), scale_range=(1.0, 1.5))
-    val_transform = SegmentationValTransform(resize_to=(256, 512))
+    train_transform = SegmentationTrainTransform(base_size=(1024, 512), scale_range=(1.0, 1.5))
+    val_transform = SegmentationValTransform(resize_to=(512, 1024))
 
     train_dataset = CityscapesDatasetWrapper(root=args.data_root, split='train', mode='fine', target_type='semantic', joint_transform=train_transform)
     valid_dataset = CityscapesDatasetWrapper(root=args.data_root, split='val', mode='fine', target_type='semantic', joint_transform=val_transform)
@@ -149,8 +151,8 @@ def main():
         checkpoint = torch.load(args.checkpoint, map_location=device)
         model.load_state_dict(checkpoint)
 
-    # criterion = torch.nn.CrossEntropyLoss(ignore_index=255)
-    criterion = HybridLoss(weight_focal=0.7, weight_dice=0.3, alpha=0.5, gamma=1.5, smooth=0.1, ignore_index=255, num_classes=num_classes)
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=255)
+    # criterion = HybridLoss(weight_focal=0.7, weight_dice=0.3, alpha=0.5, gamma=1.5, smooth=0.1, ignore_index=255, num_classes=num_classes)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)      
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_epochs, eta_min=1e-5)
 

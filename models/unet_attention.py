@@ -55,16 +55,14 @@ class AttentionGate(nn.Module):
         return x * psi
 
 class Up(nn.Module):
-    def __init__(self, in_channels, out_channels, bilinear=True):
+    def __init__(self, skip_channels, decoder_channels, out_channels, bilinear=True):
         super(Up, self).__init__()
-        self.attention = AttentionGate(F_g=out_channels, F_l=out_channels, F_int=out_channels // 2)
+        self.attention = AttentionGate(F_g=decoder_channels, F_l=skip_channels, F_int=out_channels // 2)
         if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-            self.conv = DoubleConv(in_channels, out_channels)
         else:
-            self.up = nn.ConvTranspose2d(in_channels // 2, in_channels // 2,
-                                         kernel_size=2, stride=2)
-            self.conv = DoubleConv(in_channels, out_channels)
+            self.up = nn.ConvTranspose2d(decoder_channels, decoder_channels, kernel_size=2, stride=2)
+        self.conv = DoubleConv(skip_channels + decoder_channels, out_channels)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
@@ -96,10 +94,11 @@ class UNetWithAttention(nn.Module):
         self.down3 = Down(256, 512)
         factor = 2 if bilinear else 1
         self.down4 = Down(512, 1024 // factor)
-        self.up1 = Up(1024, 512 // factor, bilinear)
-        self.up2 = Up(512, 256 // factor, bilinear)
-        self.up3 = Up(256, 128 // factor, bilinear)
-        self.up4 = Up(128, 64, bilinear)
+
+        self.up1 = Up(skip_channels=512, decoder_channels=1024 // factor, out_channels=512 // factor, bilinear=bilinear)
+        self.up2 = Up(skip_channels=256, decoder_channels=512 // factor, out_channels=256 // factor, bilinear=bilinear)
+        self.up3 = Up(skip_channels=128, decoder_channels=256 // factor, out_channels=128 // factor, bilinear=bilinear)
+        self.up4 = Up(skip_channels=64, decoder_channels=128 // factor, out_channels=64, bilinear=bilinear)
         self.outc = OutConv(64, n_classes)
 
     def forward(self, x):

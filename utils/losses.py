@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 def focal_loss(inputs, targets, alpha=0.5, gamma=1.5, ignore_index=255):
+    targets = targets.long()
     ce_loss = nn.functional.cross_entropy(inputs, targets, reduction='none', ignore_index=ignore_index)
     pt = torch.exp(-ce_loss)
     focal_loss_val = alpha * (1 - pt) ** gamma * ce_loss
