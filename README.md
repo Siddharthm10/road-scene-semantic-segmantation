@@ -86,3 +86,12 @@ python evaluation/evaluate.py --model unet --dataset cityscapes
 
 ## License
 This project is licensed under the MIT License.
+
+
+## Experiments
+| S.N | Architecture | Epochs | Loss Fn | Optimizer | Scheduler | Time per epoch | Training Loss | Validation Loss | Validation mIOU | Additional Comments |
+|-----|--------------|--------|---------|-----------|-----------|----------------|---------------|-----------------|-----------------|---------------------|
+|1.   |U-Net| 80| Cross Entropy | SGDW (0.01) | Cosine Annealing | 321s | 0.1268 | 0.2086 | 0.4316 | 512x256 sized images after preprocessing with random scaling and cropping added |
+|2.   |U-Net| 80| Hybrid Loss | SGDW (0.01) | Cosine Annealing | 340s | 0.1866 |0.2178 | 0.4273| 512x256 sized images after preprocessing with random scaling and cropping added |
+|3.   |DeeplabV3+| 100| Cross Entropy | SGDW (0.01) | Cosine Annealing | | | | | Backbone - Resnet50, 512x256 sized images after preprocessing with random scaling and cropping added |
+|4.   |DeeplabV3+| 100| Hybrid Loss | SGDW (0.01) | Cosine Annealing |  | | | | Backbone - Resnet50, 512x256 sized images after preprocessing with random scaling and cropping added |
