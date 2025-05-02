@@ -5,7 +5,6 @@
 This project aims to improve road scene segmentation for autonomous vehicles by developing a high-performing deep learning model. Road scene segmentation assigns a semantic label to each pixel in a road scene (e.g., road, vehicle, pedestrian) to help autonomous systems make safe decisions in complex traffic scenarios.
 
 ![Demo Screenshot](data/imgs/image.png)  
-<sub>_Demo: Semantic segmentation prediction on a validation image (placeholder — add actual image)_</sub>
 
 ## Objectives
 
